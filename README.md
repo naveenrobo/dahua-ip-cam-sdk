@@ -60,3 +60,7 @@ print(dahua.listen_events(callback))
 
 # NOTE: Currently everything happens in a main thread. Will be moved to a thread in later update
 ```
+
+## Credits
+
+Forked from [this gist](https://gist.github.com/gxfxyz/48072a72be3a169bc43549e676713201). Thanks [G.X.F.](https://gist.github.com/gxfxyz) for your contribution.
