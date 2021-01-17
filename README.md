@@ -63,4 +63,4 @@ print(dahua.listen_events(callback))
 
 ## Credits
 
-Forked from [this gist](https://gist.github.com/gxfxyz/48072a72be3a169bc43549e676713201). Thanks [G.X.F.](https://gist.github.com/gxfxyz) for your contribution.
+Forked from [this gist](https://gist.github.com/gxfxyz/48072a72be3a169bc43549e676713201) and added ANPR and event listeners. Thanks [G.X.F.](https://gist.github.com/gxfxyz) for your contribution.
