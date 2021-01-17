@@ -3,31 +3,22 @@
 
 """
 Basic Dahua RPC wrapper.
-
 Forked from https://gist.github.com/48072a72be3a169bc43549e676713201.git
-
 Added ANPR Plate Number extraction by Naveen Sakthivel <https://github.com/naveenrobo>
-
 Example:
     from dahua_rpc import DahuaRpc
-
     dahua = DahuaRpc(host="192.168.1.10", username="admin", password="password")
     dahua.login()
-
   # Get the current time on the device
     print(dahua.current_time())
-
   # Set display to 4 grids with first view group
     dahua.set_split(mode=4, view=1)
-
   # Make a raw RPC request to get serial number
     print(dahua.request(method="magicBox.getSerialNo"))
-
   # Get the ANPR Plate Numbers by using the following
-    object_id = dahua.getTraficInfo() # Get the object id
+    object_id = dahua.get_traffic_info() # Get the object id
     dahua.startFind(object_id=object_id) # Use the object id to find the Plate Numbers
-    response = json.dumps(dahua.doFind(object_id=object_id)) # Extract the Plate Numbers
-
+    response = json.dumps(dahua.do_find(object_id=object_id)) # Extract the Plate Numbers
 Dependencies:
   pip install requests
 """
@@ -36,6 +27,7 @@ import sys
 import hashlib
 
 import requests
+from enum import Enum
 
 if (sys.version_info > (3, 0)):
     unicode = str
@@ -71,7 +63,6 @@ class DahuaRpc(object):
 
     def login(self):
         """Dahua RPC login.
-
         Reversed from rpcCore.js (login, getAuth & getAuthByType functions).
         Also referenced:
         https://gist.github.com/avelardi/1338d9d7be0344ab7f4280618930cd0d
@@ -82,7 +73,7 @@ class DahuaRpc(object):
         method = "global.login"
         params = {'userName': self.username,
                   'password': "",
-                  'clientType': "Dahua3.0-Web3.0"}
+                  'clientType': "Web3.0"}
         r = self.request(method=method, params=params, url=url)
 
         self.session_id = r['session']
@@ -103,23 +94,21 @@ class DahuaRpc(object):
         # login2: the real login
         params = {'userName': self.username,
                   'password': pass_hash,
-                  'clientType': "Dahua3.0-Web3.0",
+                  'clientType': "Web3.0",
                   'authorityType': "Default",
                   'passwordType': "Default"}
         r = self.request(method=method, params=params, url=url)
-        print(r)
+
         if r['result'] is False:
             raise LoginError(str(r))
 
-    def getProductDef(self):
+    def get_product_def(self):
         method = "magicBox.getProductDefinition"
 
         params = {
             "name" : "Traffic"
         }
         r = self.request(method=method, params=params)
-        print("Response : ")
-        print(r)
 
         if r['result'] is False:
             raise RequestError(str(r))
@@ -133,28 +122,25 @@ class DahuaRpc(object):
         method = "global.keepAlive"
         r = self.request(method=method, params=params)
 
-        print(r)
-
         if r['result'] is True:
             return True
         else:
             raise RequestError(str(r))
 
-    def getTraficInfo(self):
+    def get_traffic_info(self):
         method = "RecordFinder.factory.create"
 
         params = {
             "name" : "TrafficSnapEventInfo"
         }
         r = self.request(method=method, params=params)
-        print("Response : ")
         
         if type(r['result']):
             return r['result']
         else:
             raise RequestError(str(r))
 
-    def startFind(self,object_id):
+    def start_find(self,object_id):
         method = "RecordFinder.startFind"
         object_id = object_id
         params = {
@@ -163,20 +149,17 @@ class DahuaRpc(object):
             }
         }
         r = self.request(object_id=object_id,method=method, params=params)
-        print("Response : ")
-        print(r)
 
         if r['result'] is False:
             raise RequestError(str(r))
 
-    def doFind(self,object_id):
+    def do_find(self,object_id):
         method = "RecordFinder.doFind"
         object_id = object_id
         params = {
             "count" : 50000
         }
         r = self.request(object_id=object_id,method=method, params=params)
-        print("Response : ")
 
         if r['result'] is False:
             raise RequestError(str(r))
@@ -213,7 +196,6 @@ class DahuaRpc(object):
 
         method = "global.getCurrentTime"
         r = self.request(method=method)
-        print(r)
         if r['result'] is False:
             raise RequestError(str(r))
 
@@ -257,6 +239,36 @@ class DahuaRpc(object):
         view = int(r['params']['group']) + 1
 
         return mode, view
+
+    def attach_event(self, event = []):
+        """Attach a event to current session"""
+        method = "eventManager.attach"
+        if(event is None):
+            return
+        params = {
+            'codes' : [*event]
+        }
+
+        r = self.request(method=method, params=params)
+
+        if r['result'] is False:
+            raise RequestError(str(r))
+
+        return r['params']
+
+
+    def listen_events(self, _callback= None):
+        """ Listen for envents. Attach an event before using this function """
+        url = "http://{host}/SubscribeNotify.cgi?sessionId={session}".format(host=self.host,session=self.session_id)
+        response = self.s.get(url, stream= True)
+
+        buffer = ""
+        for chunk in response.iter_content(chunk_size=1):
+            buffer += chunk.decode("utf-8")
+            if (buffer.endswith('</script>') is True):
+                if _callback:
+                    _callback(buffer)
+                buffer = ""
 
     def set_split(self, mode, view):
         """Set display split mode."""
