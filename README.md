@@ -1,5 +1,5 @@
 # Dahua SDK
-SDK for Dahua ANPR to extract Plate Numbers and listening of events like Video Motion, Camera Tampering which are support by camera.
+SDK for Dahua IP Cameras to extract Plate Numbers and listening of events like Video Motion, Camera Tampering which are support by camera.
 
 ## Info
 
